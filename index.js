@@ -19,6 +19,7 @@ io.on("connection", socket => {
   socket.on("join", ({ name, room }, callback) => {
     const { error, user } = addUser({ id: socket.id, name, room });
     if (error) return callback(error);
+    console.log(`User ${user.name} has joined ${user.room}.`);
 
     socket.emit("message", {
       user: "admin",
@@ -31,23 +32,24 @@ io.on("connection", socket => {
 
     socket.join(user.room);
 
-    io.to(user.room).emit("roomData", {
-      room: user.room,
-      users: getUsersInRoom(user.room)
-    });
+    // io.to(user.room).emit("roomData", {
+    //   room: user.room,
+    //   users: getUsersInRoom(user.room)
+    // });
 
     callback();
   });
 
   socket.on("sendMessage", (message, callback) => {
     const user = getUser(socket.id);
-    io.to(user.room).emit("message", { user: user.name, text: message });
-    io.to(user.room).getMaxListeners("roomData", {
-      room: user.room,
-      users: getUsersInRoom(user.room)
-    });
+    if (user) {
+      console.log(`User ${user.name} sent message: ${message}`);
+      io.to(user.room).emit("message", { user: user.name, text: message });
+      callback();
+      return;
+    }
 
-    callback();
+    callback({ message: "Server error, please try sending again." });
   });
 
   socket.on("disconnect", () => {
@@ -57,8 +59,8 @@ io.on("connection", socket => {
         user: "admin",
         text: `${user.name} has left.`
       });
+      console.log(`User ${user.name} has disconnected.`);
     }
-    console.log(`User has disconnected.`);
   });
 });
 
